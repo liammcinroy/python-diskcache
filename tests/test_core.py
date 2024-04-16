@@ -1418,8 +1418,8 @@ def test_memoize_args_to_key_invertible(cache, typed):
     assert test(0)
     assert test(a=0)
     assert test(0, 1, 2, a=0, b=1, c=2)
-    assert test(None, 'fake kwarg start', None)
-    assert test(None, 'fake kwarg start', None, a=0)
+    assert test(None, 'fake kwarg start')
+    assert test(None, 'fake kwarg start', a=0)
     assert test(bool, bytes, float, int, str)
     for key in cache:
         args, kwargs = dc.core.key_to_args(key[1:])

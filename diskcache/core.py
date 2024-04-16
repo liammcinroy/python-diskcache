@@ -402,8 +402,7 @@ def args_to_key(base, args, kwargs, typed, ignore):
         kwargs = {key: val for key, val in kwargs.items() if key not in ignore}
         sorted_items = sorted(kwargs.items())
 
-        for item in sorted_items:
-            key += item
+        key += tuple(sorted_items)
 
     if typed:
         key += tuple(type(arg) for arg in args)

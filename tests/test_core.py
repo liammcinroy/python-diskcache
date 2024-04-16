@@ -1407,8 +1407,9 @@ def test_memoize_iter(cache):
         assert cache[key] == 6
 
 
-def test_memoize_args_to_key_invertible(cache):
-    @cache.memoize()
+@pytest.mark.parametrize('typed', [False, True])
+def test_memoize_args_to_key_invertible(cache, typed):
+    @cache.memoize(typed=typed)
     def test(*args, **kwargs):
         return (args, kwargs)
 
@@ -1417,9 +1418,14 @@ def test_memoize_args_to_key_invertible(cache):
     assert test(0)
     assert test(a=0)
     assert test(0, 1, 2, a=0, b=1, c=2)
-    assert test(None, "fake kwarg start", None)
-    assert test(None, "fake kwarg start", None, a=0)
+    assert test(None, 'fake kwarg start', None)
+    assert test(None, 'fake kwarg start', None, a=0)
     assert test(bool, bytes, float, int, str)
     for key in cache:
-        assert dc.key_to_args(key) == cache[key]
-
+        args, kwargs = dc.core.key_to_args(key[1:])
+        assert (args, kwargs) == cache[key]
+        if typed:
+            expected_key_len = 2 + (2 if typed else 1) * (
+                len(args) + len(kwargs)
+            )
+            assert expected_key_len == len(key)

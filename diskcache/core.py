@@ -413,7 +413,8 @@ def args_to_key(base, args, kwargs, typed, ignore):
 
 
 def key_to_args(key):
-    """Get the args and kwargs from a cache key.
+    """Get the args and kwargs from a cache key's tail (i.e. everything
+    following the base of the key).
 
     :param tuple key: cache key tuple
     :return: tuple of args, kwargs
@@ -422,37 +423,37 @@ def key_to_args(key):
     """
     kwargs_ranges = []
     type_range = None
-    last_kwargs_start_idx = -1
-    last_typed_start_idx = -1
-    for idx, val in key:
-        if last_kwargs_start_idx == -1 and val is None:
-            last_kwargs_start_idx = idx + 1
-        elif last_kwargs_start_idx != -1 and val is not tuple:
+    last_kwargs_start_idx = last_typed_start_idx = None
+    for idx, val in enumerate(key):
+        if last_kwargs_start_idx is not None and not isinstance(val, tuple):
             kwargs_ranges.append((last_kwargs_start_idx, idx))
-            last_kwargs_start_idx = -1
+            last_kwargs_start_idx = None
+        if last_kwargs_start_idx is None and val is None:
+            last_kwargs_start_idx = idx + 1
 
-        if last_typed_start_idx != -1 and val is type:
+        val_is_type = isinstance(val, type)
+        if last_typed_start_idx is not None and not val_is_type:
+            last_typed_start_idx = None
+        if last_typed_start_idx is None and val_is_type:
             last_typed_start_idx = idx
-        elif last_typed_start_idx != -1 and val is not type:
-            last_typed_start_idx = -1
 
-    if last_kwargs_start_idx != -1:
-        kwargs_ranges.append(last_kwargs_start_idx, len(key)) 
-    elif last_type_idx != -1:
-        type_range = (last_type_idx, len(key))
+    if last_kwargs_start_idx is not None:
+        kwargs_ranges.append((last_kwargs_start_idx, len(key)))
+    elif last_typed_start_idx is not None:
+        type_range = (last_typed_start_idx, len(key))
 
     if type_range is not None:
         num_args_kwargs = type_range[1] - type_range[0]
         kwargs_range = [
             (start, end)
             for start, end in kwargs_ranges
-            if (start - 2) + (end - start) == num_args_kwargs
+            if (start - 1) + (end - start) == num_args_kwargs
         ][-1]
     else:
         kwargs_range = kwargs_ranges[-1]
 
     start, end = kwargs_range
-    args = key[1: start - 1]
+    args = key[: start - 1]
     kwargs = key[start:end]
 
     return (args, dict(kwargs))

@@ -401,7 +401,6 @@ def args_to_key(base, args, kwargs, typed, ignore):
     if kwargs:
         kwargs = {key: val for key, val in kwargs.items() if key not in ignore}
         sorted_items = sorted(kwargs.items())
-
         key += tuple(sorted_items)
 
     if typed:
@@ -411,6 +410,52 @@ def args_to_key(base, args, kwargs, typed, ignore):
             key += tuple(type(value) for _, value in sorted_items)
 
     return key
+
+
+def key_to_args(key):
+    """Get the args and kwargs from a cache key.
+
+    :param tuple key: cache key tuple
+    :return: tuple of args, kwargs
+    :rtype: tuple pair of tuple and dict
+
+    """
+    kwargs_ranges = []
+    type_range = None
+    last_kwargs_start_idx = -1
+    last_typed_start_idx = -1
+    for idx, val in key:
+        if last_kwargs_start_idx == -1 and val is None:
+            last_kwargs_start_idx = idx + 1
+        elif last_kwargs_start_idx != -1 and val is not tuple:
+            kwargs_ranges.append((last_kwargs_start_idx, idx))
+            last_kwargs_start_idx = -1
+
+        if last_typed_start_idx != -1 and val is type:
+            last_typed_start_idx = idx
+        elif last_typed_start_idx != -1 and val is not type:
+            last_typed_start_idx = -1
+
+    if last_kwargs_start_idx != -1:
+        kwargs_ranges.append(last_kwargs_start_idx, len(key)) 
+    elif last_type_idx != -1:
+        type_range = (last_type_idx, len(key))
+
+    if type_range is not None:
+        num_args_kwargs = type_range[1] - type_range[0]
+        kwargs_range = [
+            (start, end)
+            for start, end in kwargs_ranges
+            if (start - 2) + (end - start) == num_args_kwargs
+        ][-1]
+    else:
+        kwargs_range = kwargs_ranges[-1]
+
+    start, end = kwargs_range
+    args = key[1: start - 1]
+    kwargs = key[start:end]
+
+    return (args, dict(kwargs))
 
 
 class Cache:

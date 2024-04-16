@@ -1405,3 +1405,21 @@ def test_memoize_iter(cache):
     assert len(cache) == 3
     for key in cache:
         assert cache[key] == 6
+
+
+def test_memoize_args_to_key_invertible(cache):
+    @cache.memoize()
+    def test(*args, **kwargs):
+        return (args, kwargs)
+
+    cache.clear()
+    assert test()
+    assert test(0)
+    assert test(a=0)
+    assert test(0, 1, 2, a=0, b=1, c=2)
+    assert test(None, "fake kwarg start", None)
+    assert test(None, "fake kwarg start", None, a=0)
+    assert test(bool, bytes, float, int, str)
+    for key in cache:
+        assert dc.key_to_args(key) == cache[key]
+
